@@ -1,5 +1,5 @@
 import { _decorator, Component, Sprite, SpriteFrame, UITransform } from 'cc'
-import levels from '../../Level'
+import levels from '../../Levels'
 
 export const TILE_WIDTH = 50
 export const TILE_HEIGHT = 50
