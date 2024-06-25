@@ -1,12 +1,11 @@
 import { _decorator, Component, Sprite, SpriteFrame, UITransform, Animation, AnimationClip, animation } from 'cc'
 import levels from '../../Levels'
 import { TILE_HEIGHT, TILE_WIDTH } from '../Tile/TileManage'
-import ResourceManager from '../../Runtime/ResourceManager'
-import { CONTROLLER_ENUM, EVENT_ENUM } from '../../Enum'
+import { CONTROLLER_ENUM, DIRECTION_ENUM, DIRECTION_ORDER_ENUM, ENTITY_STATE_ENUM, EVENT_ENUM, PARAMS_NAME_ENUM } from '../../Enum'
 import EventManager from '../../Runtime/EventManager'
+import { PlayerStateMachine } from './PlayerStateMachine'
 
 //动画帧数
-const ANIMATION_SPEED = 1/8
 const { ccclass, property } = _decorator
 @ccclass('PlayerManager')
 export class PlayerManager extends Component {
@@ -14,11 +13,35 @@ export class PlayerManager extends Component {
   y:number = 0
   targetX:number = 0
   targetY:number = 0
-
+  fsm: PlayerStateMachine
+  private _direction: DIRECTION_ENUM
+  private _state: ENTITY_STATE_ENUM
   private readonly move_speed = 1/10
+  
+  get direction(){
+    return this._direction
+  }
+  set direction(newDirection){
+    this._direction = newDirection
+    this.fsm.setParams(PARAMS_NAME_ENUM.DIRECTION, DIRECTION_ORDER_ENUM[this._direction])
+  }
+  get state(){
+    return this._state
+  }
+  set state(newState){
+    this._state = newState
+    this.fsm.setParams(this._state, true)
+  }
   async init(){
-    await this.render()
-
+    const sprite = this.addComponent(Sprite)
+    //代码方式更改属性
+    sprite.sizeMode = Sprite.SizeMode.CUSTOM
+    const transform = this.getComponent(UITransform)
+    transform.setContentSize(TILE_WIDTH*4, TILE_HEIGHT*4)
+    this.fsm = this.addComponent(PlayerStateMachine)
+    await this.fsm.init()
+    this.direction = DIRECTION_ENUM.TOP
+    this.state = ENTITY_STATE_ENUM.IDLE
     EventManager.Instance.on(EVENT_ENUM.PLAYER_CTRL, this.move, this)
   }
 
@@ -55,29 +78,17 @@ export class PlayerManager extends Component {
       this.targetX -= 1
     } else if (type === CONTROLLER_ENUM.RIGHT) {
       this.targetX += 1
+    } else if (type === CONTROLLER_ENUM.TURNLEFT) {
+      if(this.direction === DIRECTION_ENUM.TOP){
+        this.direction = DIRECTION_ENUM.LEFT
+      } else if (this.direction === DIRECTION_ENUM.BOTTOM) {
+        this.direction = DIRECTION_ENUM.RIGHT
+      } else if (this.direction === DIRECTION_ENUM.LEFT) {
+        this.direction = DIRECTION_ENUM.BOTTOM
+      } else if (this.direction === DIRECTION_ENUM.RIGHT) {
+        this.direction = DIRECTION_ENUM.TOP
+      }
+      this.state = ENTITY_STATE_ENUM.TURNLEFT
     }
-  }
-  async render(){
-    const sprite = this.addComponent(Sprite)
-    //代码方式更改属性
-    sprite.sizeMode = Sprite.SizeMode.CUSTOM
-    const transform = this.getComponent(UITransform)
-    transform.setContentSize(TILE_WIDTH*4, TILE_HEIGHT*4)
-    //加载资源
-    const spriteFrames = await ResourceManager.Instance.loadDir('texture/player/idle/top')
-    const animationComponent = this.addComponent(Animation)
-    //挂在动画节点
-    const animationClip = new AnimationClip()
-    const track = new animation.ObjectTrack()
-    track.path = new animation.TrackPath().toComponent(Sprite).toProperty('spriteFrame')
-    const frames: Array<[number, SpriteFrame]> = spriteFrames.map((item,index)=>[ANIMATION_SPEED * index,item])
-    track.channel.curve.assignSorted(frames)
-    
-    animationClip.addTrack(track)
-    //修改节点属性
-    animationClip.duration = frames.length * ANIMATION_SPEED //动画剪辑周期
-    animationClip.wrapMode = AnimationClip.WrapMode.Loop // 设置循环播放
-    animationComponent.defaultClip = animationClip
-    animationComponent.play()
   }
 }
