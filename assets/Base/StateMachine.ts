@@ -2,11 +2,11 @@ import { _decorator, Component, Sprite, SpriteFrame, UITransform, Animation, Ani
 import { FSM_PARAM_TYPE_ENUM, PARAMS_NAME_ENUM } from '../Enum'
 import State from './State'
 import SubStateMachine from './SubStateMachine'
-
-
 //动画帧数
 const { ccclass, property } = _decorator
+
 type ParamsValueType = boolean | number
+
 export interface IParamsValue {
   type: FSM_PARAM_TYPE_ENUM
   value: ParamsValueType

@@ -4,7 +4,7 @@ import State from '../../Base/State'
 import { AnimationClip } from 'cc'
 import DirectionSubStateMachine from '../../Base/DirectionSubStateMachine'
 
-const BASE_URL = 'texture/player/idle'
+const BASE_URL = 'texture/woodenskeleton/idle'
 
 export default class IdleSubStateMachine extends DirectionSubStateMachine {
   constructor(fsm: StateMachine) {

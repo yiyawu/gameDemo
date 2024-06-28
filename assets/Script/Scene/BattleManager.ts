@@ -8,6 +8,7 @@ import { TILE_HEIGHT, TILE_WIDTH } from '../Tile/TileManage'
 import EventManager from '../../Runtime/EventManager'
 import { EVENT_ENUM } from '../../Enum'
 import { PlayerManager } from '../Player/PlayerManager'
+import { WoodenSkeletonManager } from '../WoodenSkeleton/WoodenSkeletonManager'
 @ccclass('BattleManager')
 export class BattleManager extends Component {
   level: ILevel
@@ -26,17 +27,17 @@ export class BattleManager extends Component {
     DataManager.Instance.levelIndex++
     this.initLevel()
   }
-  initLevel() {
+  async initLevel() {
     const level = levels[`level${DataManager.Instance.levelIndex}`]
-    console.log(level);
     if (level) {
       this.clearLevel()
       this.level = level
       DataManager.Instance.mapInfo = this.level.mapInfo
       DataManager.Instance.mapRowCount = this.level.mapInfo.length || 0
       DataManager.Instance.mapColumnCount = this.level.mapInfo[0].length || 0
-      this.generateTileMap()
-      this.generatePlayer()
+      await this.generateTileMap()
+      await this.generateEnemies()
+      await this.generatePlayer()
     }
   }
   clearLevel(){
@@ -47,24 +48,34 @@ export class BattleManager extends Component {
     this.stage = createUINode()
     this.stage.setParent(this.node)
   }
-  generatePlayer(){
+  async generatePlayer(){
     const player = createUINode()
     player.setParent(this.stage)
-    player.addComponent(PlayerManager).init()
+    const playerManager = player.addComponent(PlayerManager)
+    await playerManager.init()
+    DataManager.Instance.player = playerManager
+    EventManager.Instance.emit(EVENT_ENUM.PLAYER_BORN, true)
   }
-  generateTileMap() {
+  async generateTileMap() {
     //地图节点，地图要放在场景上
     const tileMap = createUINode()
     tileMap.setParent(this.stage)
     const tileManage = tileMap.addComponent(TileMapManager)
-    tileManage.init()
+    await tileManage.init()
 
     this.adaptPos()
+  }
+  async generateEnemies() {
+    const enemies = createUINode()
+    enemies.setParent(this.stage)
+    const enemiesManager = enemies.addComponent(WoodenSkeletonManager)
+    await enemiesManager.init()
+    DataManager.Instance.enemies.push(enemiesManager)
   }
   adaptPos() {
     const { mapRowCount, mapColumnCount } = DataManager.Instance
     const disX = (TILE_WIDTH * mapRowCount) / 2
-    const disY = (TILE_HEIGHT * mapColumnCount) / 2
+    const disY = (TILE_HEIGHT * mapColumnCount) / 2 + 80
     this.stage.setPosition(-disX, disY)
   }
 }

@@ -4,9 +4,9 @@ import State from '../../Base/State'
 import { AnimationClip } from 'cc'
 import DirectionSubStateMachine from '../../Base/DirectionSubStateMachine'
 
-const BASE_URL = 'texture/player/idle'
+const BASE_URL = 'texture/woodenskeleton/attack'
 
-export default class IdleSubStateMachine extends DirectionSubStateMachine {
+export default class AttackSubStateMachine extends DirectionSubStateMachine {
   constructor(fsm: StateMachine) {
     super(fsm)
     this.stateMachines.set(DIRECTION_ENUM.TOP, new State(fsm, `${BASE_URL}/top`, AnimationClip.WrapMode.Loop))

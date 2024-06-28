@@ -1,6 +1,7 @@
 import { AnimationClip,animation,Sprite,SpriteFrame } from "cc"
 import ResourceManager from "../Runtime/ResourceManager"
 import StateMachine from "./StateMachine"
+import { sortSpriteFrame } from "../Utils"
 
 export const ANIMATION_SPEED = 1/8
 export default class State {
@@ -20,12 +21,13 @@ export default class State {
     this.fsm.waitingList.push(promise)
     const spriteFrames = await promise
     //挂在动画节点
-    this.animationClip = new AnimationClip()
     const track = new animation.ObjectTrack()
     track.path = new animation.TrackPath().toComponent(Sprite).toProperty('spriteFrame')
-    const frames: Array<[number, SpriteFrame]> = spriteFrames.map((item,index)=>[this.speed * index,item])
+    const frames: Array<[number, SpriteFrame]> = sortSpriteFrame(spriteFrames).map((item,index)=>[this.speed * index,item])
     track.channel.curve.assignSorted(frames)
-    
+
+    this.animationClip = new AnimationClip()
+    this.animationClip.name = this.spriteFrameDir
     this.animationClip.addTrack(track)
     //修改节点属性
     this.animationClip.duration = frames.length * this.speed //动画剪辑周期
