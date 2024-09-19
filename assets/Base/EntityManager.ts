@@ -3,6 +3,7 @@ import { DIRECTION_ENUM, DIRECTION_ORDER_ENUM, ENTITY_STATE_ENUM, ENTITY_TYPE_EN
 import { IEntity } from "../Levels"
 import { PlayerStateMachine } from "../Script/Player/PlayerStateMachine"
 import { TILE_HEIGHT, TILE_WIDTH } from "../Script/Tile/TileManage"
+import { randomByLength } from '../Utils'
 import { WoodenSkeletonStateMachine } from "../Script/WoodenSkeleton/WoodenSkeletonStateMachine"
 const { ccclass, property } = _decorator
 /**
@@ -17,6 +18,7 @@ const { ccclass, property } = _decorator
 export default class EntityManager extends Component {
   x:number = 0
   y:number = 0
+  id: string = randomByLength(12)
   fsm: PlayerStateMachine | WoodenSkeletonStateMachine
   private _direction: DIRECTION_ENUM
   private _state: ENTITY_STATE_ENUM
@@ -47,6 +49,8 @@ export default class EntityManager extends Component {
     this.state = params.state
     this.type = params.type
   }
+  
+  onDestroy() {}
 
   update(): void {
       this.node.setPosition(this.x * TILE_WIDTH - TILE_WIDTH * 1.5, -this.y * TILE_HEIGHT + TILE_HEIGHT * 1.5)

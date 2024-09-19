@@ -1,12 +1,11 @@
-import StateMachine from '../../Base/StateMachine'
-import { DIRECTION_ENUM, DIRECTION_ORDER_ENUM, PARAMS_NAME_ENUM } from '../../Enum'
-import State from '../../Base/State'
-import { AnimationClip } from 'cc'
 import DirectionSubStateMachine from '../../Base/DirectionSubStateMachine'
+import StateMachine from '../../Base/StateMachine'
+import { DIRECTION_ENUM } from '../../Enum'
+import State from '../../Base/State'
 
-const BASE_URL = 'texture/woodenskeleton/attack'
+const BASE_URL = 'texture/woodenskeleton/death'
 
-export default class AttackSubStateMachine extends DirectionSubStateMachine {
+export default class DeathSubStateMachine extends DirectionSubStateMachine {
   constructor(fsm: StateMachine) {
     super(fsm)
     this.stateMachines.set(DIRECTION_ENUM.TOP, new State(fsm, `${BASE_URL}/top`))

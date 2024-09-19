@@ -1,5 +1,10 @@
 import { Layers, Node, SpriteFrame, UITransform } from 'cc'
-
+/***
+ * 生成指定长度随机uuid
+ * @param n
+ */
+export const randomByLength = (n: number) =>
+  Array.from({ length: n }).reduce<string>((total: string) => total + Math.floor(Math.random() * 10), '')
 export const createUINode = (name: string = '') => {
   const node = new Node(name)
   const transform = node.addComponent(UITransform)
