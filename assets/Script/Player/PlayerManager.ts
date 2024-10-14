@@ -1,5 +1,5 @@
 import { _decorator, Component, Sprite, SpriteFrame, UITransform, Animation, AnimationClip, animation, input } from 'cc'
-import levels from '../../Levels'
+import levels, { IEntity } from '../../Levels'
 import { TILE_HEIGHT, TILE_WIDTH } from '../Tile/TileManage'
 import { CONTROLLER_ENUM, DIRECTION_ENUM, DIRECTION_ORDER_ENUM, ENTITY_STATE_ENUM, ENTITY_TYPE_ENUM, EVENT_ENUM, PARAMS_NAME_ENUM } from '../../Enum'
 import EventManager from '../../Runtime/EventManager'
@@ -11,34 +11,33 @@ import DataManager from '../../Runtime/DataManager'
 const { ccclass, property } = _decorator
 @ccclass('PlayerManager')
 export class PlayerManager extends EntityManager {
-  targetX:number = 0
-  targetY:number = 0
+  targetX:number
+  targetY:number
   isMoving = false
   private readonly move_speed = 1/10
 
-  async init(){
+  async init(params: IEntity){
+    console.log(params,'d')
     this.fsm = this.addComponent(PlayerStateMachine)
     await this.fsm.init()
-    super.init({
-      x: 2,
-      y: 8,
-      type: ENTITY_TYPE_ENUM.PLAYER,
-      direction: DIRECTION_ENUM.TOP,
-      state: ENTITY_STATE_ENUM.IDLE
-    })
+    super.init(params)
     this.targetX = this.x
     this.targetY = this.y
-    this.direction = DIRECTION_ENUM.TOP
-    this.state = ENTITY_STATE_ENUM.IDLE
+
     EventManager.Instance.on(EVENT_ENUM.PLAYER_CTRL, this.inputProcess, this)
     EventManager.Instance.on(EVENT_ENUM.ATTACK_PLAYER, this.onDead, this)
+  }
+  onDestroy() {
+    super.onDestroy()
+    EventManager.Instance.off(EVENT_ENUM.PLAYER_CTRL, this.inputProcess)
+    EventManager.Instance.off(EVENT_ENUM.ATTACK_PLAYER, this.onDead)
   }
   onDead(type: ENTITY_STATE_ENUM) {
     this.state = type
   }
   update(): void {
-      this.updateXY()
-      super.update()
+    this.updateXY()
+    super.update()
   }
   /**
    * 实现逻辑，设置目标坐标targetX.targetY
