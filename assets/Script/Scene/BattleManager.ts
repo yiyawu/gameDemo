@@ -146,23 +146,6 @@ export class BattleManager extends Component {
           type,
         }
       }),
-      // spikes: DataManager.Instance.spikes.map(({ x, y, count, type }) => {
-      //   return {
-      //     x,
-      //     y,
-      //     count,
-      //     type,
-      //   }
-      // }),
-      // bursts: DataManager.Instance.bursts.map(({ x, y, state, direction, type }) => {
-      //   return {
-      //     x,
-      //     y,
-      //     state,
-      //     direction,
-      //     type,
-      //   }
-      // }),
     }
 
     DataManager.Instance.records.push(item)
@@ -183,21 +166,6 @@ export class BattleManager extends Component {
         DataManager.Instance.enemies[i].state = item.state
         DataManager.Instance.enemies[i].direction = item.direction
       }
-
-      // for (let i = 0; i < data.spikes.length; i++) {
-      //   const item = data.spikes[i]
-      //   DataManager.Instance.spikes[i].x = item.x
-      //   DataManager.Instance.spikes[i].y = item.y
-      //   DataManager.Instance.spikes[i].count = item.count
-      // }
-
-      // for (let i = 0; i < data.bursts.length; i++) {
-      //   const item = data.bursts[i]
-      //   DataManager.Instance.bursts[i].x = item.x
-      //   DataManager.Instance.bursts[i].y = item.y
-      //   DataManager.Instance.bursts[i].state = item.state
-      // }
-
       DataManager.Instance.door.x = data.door.x
       DataManager.Instance.door.y = data.door.y
       DataManager.Instance.door.state = data.door.state

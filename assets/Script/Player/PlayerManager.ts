@@ -75,7 +75,11 @@ export class PlayerManager extends EntityManager {
     }
     const id = this.willAttack(inputDirection)
     if(id){
+      EventManager.Instance.emit(EVENT_ENUM.RECORD_STEP)
+      this.state = ENTITY_STATE_ENUM.ATTACK
       EventManager.Instance.emit(EVENT_ENUM.ATTACK_ENEMY, id)
+      EventManager.Instance.emit(EVENT_ENUM.PLAYER_MOVE_END)
+      EventManager.Instance.emit(EVENT_ENUM.DOOR_OPEN)
       return
     }
     if(this.willBlock(inputDirection)){
@@ -85,6 +89,7 @@ export class PlayerManager extends EntityManager {
     this.move(inputDirection)
   }
   move(type: CONTROLLER_ENUM){
+    EventManager.Instance.emit(EVENT_ENUM.RECORD_STEP)
     if(type === CONTROLLER_ENUM.TOP){
       this.targetY -= 1
       this.isMoving = true
@@ -108,6 +113,7 @@ export class PlayerManager extends EntityManager {
         this.direction = DIRECTION_ENUM.TOP
       }
       this.state = ENTITY_STATE_ENUM.TURNLEFT
+      EventManager.Instance.emit(EVENT_ENUM.PLAYER_MOVE_END)
     } else if (type === CONTROLLER_ENUM.TURNRIGHT) {
       if(this.direction === DIRECTION_ENUM.TOP){
         this.direction = DIRECTION_ENUM.RIGHT
@@ -119,6 +125,7 @@ export class PlayerManager extends EntityManager {
         this.direction = DIRECTION_ENUM.BOTTOM
       }
       this.state = ENTITY_STATE_ENUM.TURNRIGHT
+      EventManager.Instance.emit(EVENT_ENUM.PLAYER_MOVE_END)
     }
   }
   willBlock(inputDirection: CONTROLLER_ENUM) {
