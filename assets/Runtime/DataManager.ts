@@ -1,7 +1,10 @@
 import Singleton from '../Base/Singleton'
 import { ILevel, ITile } from '../Levels'
+import { BurstManager } from '../Script/Burst/BurstManager'
 import { DoorManager } from '../Script/Door/DoorManager'
 import { PlayerManager } from '../Script/Player/PlayerManager'
+import { SmokeManager } from '../Script/Smoke/SmokeManager'
+import SpikesManager from '../Script/Spikes/SpikesManager'
 import { TileManager } from '../Script/Tile/TileManage'
 import { WoodenSkeletonManager } from '../Script/WoodenSkeleton/WoodenSkeletonManager'
 export type IRecord = Omit<ILevel, 'mapInfo'>
@@ -12,6 +15,9 @@ export default class DataManager extends Singleton {
   player: PlayerManager
   enemies: WoodenSkeletonManager[]
   door: DoorManager
+  spikes: SpikesManager[]
+  bursts: BurstManager[]
+  smokes: SmokeManager[]
   mapRowCount: number
   mapColumnCount: number
   levelIndex: number = 1
@@ -31,5 +37,8 @@ export default class DataManager extends Singleton {
     this.enemies = []
     this.door = null
     this.records = []
+    this.smokes = []
+    this.spikes = []
+    this.bursts = []
   }
 }

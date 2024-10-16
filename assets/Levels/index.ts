@@ -30,8 +30,8 @@ export interface ILevel {
   mapInfo: Array<Array<ITile>>
   player: IEntity
   enemies: Array<IEntity>
-  // spikes: Array<ISpikes> 尖刺陷阱
-  // bursts: Array<IEntity> 爆炸陷阱
+  spikes: Array<ISpikes> //尖刺陷阱
+  bursts: Array<IEntity> //爆炸陷阱
   door: IEntity
 }
 

@@ -6,6 +6,8 @@ import EventManager from '../../Runtime/EventManager'
 import { PlayerStateMachine } from './PlayerStateMachine'
 import EntityManager from '../../Base/EntityManager'
 import DataManager from '../../Runtime/DataManager'
+import { BurstManager } from '../Burst/BurstManager'
+import EnemyManager from '../../Base/EnemyManager'
 
 //动画帧数
 const { ccclass, property } = _decorator
@@ -70,7 +72,6 @@ export class PlayerManager extends EntityManager {
       this.state === ENTITY_STATE_ENUM.AIRDEATH || 
       this.state === ENTITY_STATE_ENUM.ATTACK
     ) {
-      console.log(1,this.state);
       return 
     }
     const id = this.willAttack(inputDirection)
@@ -93,15 +94,19 @@ export class PlayerManager extends EntityManager {
     if(type === CONTROLLER_ENUM.TOP){
       this.targetY -= 1
       this.isMoving = true
+      this.showSmoke(DIRECTION_ENUM.TOP)
     } else if (type === CONTROLLER_ENUM.BOTTOM) {
       this.targetY += 1
       this.isMoving = true
+      this.showSmoke(DIRECTION_ENUM.BOTTOM)
     } else if (type === CONTROLLER_ENUM.LEFT) {
       this.targetX -= 1
       this.isMoving = true
+      this.showSmoke(DIRECTION_ENUM.LEFT)
     } else if (type === CONTROLLER_ENUM.RIGHT) {
       this.targetX += 1
       this.isMoving = true
+      this.showSmoke(DIRECTION_ENUM.RIGHT)
     } else if (type === CONTROLLER_ENUM.TURNLEFT) {
       if(this.direction === DIRECTION_ENUM.TOP){
         this.direction = DIRECTION_ENUM.LEFT
@@ -128,11 +133,20 @@ export class PlayerManager extends EntityManager {
       EventManager.Instance.emit(EVENT_ENUM.PLAYER_MOVE_END)
     }
   }
+  showSmoke(type: DIRECTION_ENUM) {
+    EventManager.Instance.emit(EVENT_ENUM.SHOW_SMOKE, this.x, this.y, type)
+  }
   willBlock(inputDirection: CONTROLLER_ENUM) {
     const { targetY: y, targetX: x, direction } = this
     const { tileInfo } = DataManager.Instance
     const { mapRowCount: row, mapColumnCount: column } = DataManager.Instance
     const { x: doorX, y: doorY, state: doorState } = DataManager.Instance.door || {}
+    const enemies: EnemyManager[] = DataManager.Instance.enemies.filter(
+      (enemy: EnemyManager) => enemy.state !== ENTITY_STATE_ENUM.DEATH
+    )
+    const bursts: BurstManager[] = DataManager.Instance.bursts.filter(
+      (burst: BurstManager) => burst.state !== ENTITY_STATE_ENUM.DEATH
+    )
     if(inputDirection === CONTROLLER_ENUM.TOP){
       const playerNextY = y - 1
       if(direction === DIRECTION_ENUM.TOP){
@@ -151,6 +165,25 @@ export class PlayerManager extends EntityManager {
           this.state = ENTITY_STATE_ENUM.BLOCKFRONT
           return true
         }
+
+        //敌人判断
+        for(let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i]
+          const { x: enemyX, y: enemyY } = enemy
+          if((enemyX === x &&enemyY === weaponNextY) || (enemyX === x && enemyY === playerNextY)) {
+            this.state = ENTITY_STATE_ENUM.BLOCKFRONT
+            return true
+          }
+        }
+
+        //地裂陷阱判断
+        if(
+          bursts.some(burst => burst.x === x && burst.y === playerNextY) &&
+          (!weaponTile || weaponTile.turnable)
+        ) {
+          return false
+        }
+
         if(playerTile && playerTile.moveable && (!weaponTile || weaponTile.turnable)){
           // return false
         } else {
@@ -173,6 +206,24 @@ export class PlayerManager extends EntityManager {
           this.state = ENTITY_STATE_ENUM.BLOCKBACK
           return true
         }
+        //敌人判断
+        for(let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i]
+          const { x: enemyX, y: enemyY } = enemy
+          if((enemyX === x && enemyY === playerNextY)) {
+            this.state = ENTITY_STATE_ENUM.BLOCKBACK
+            return true
+          }
+        }
+
+        //地裂陷阱判断
+        if(
+          bursts.some(burst => burst.x === x && burst.y === playerNextY) &&
+          (!weaponTile || weaponTile.turnable)
+        ) {
+          return false
+        }
+
         if(playerTile && playerTile.moveable && (!weaponTile || weaponTile.turnable)){
           // return false
         } else {
@@ -181,7 +232,7 @@ export class PlayerManager extends EntityManager {
         }
       } else if(direction === DIRECTION_ENUM.LEFT){
         if(playerNextY<0) {
-          this.state = ENTITY_STATE_ENUM.BLOCKLEFT
+          this.state = ENTITY_STATE_ENUM.BLOCKRIGHT
           return true
         }
         const weaponNextY = y - 1
@@ -193,24 +244,43 @@ export class PlayerManager extends EntityManager {
           ((doorX === x && doorY === playerNextY) || (doorX === weaponNextX && doorY === weaponNextY)) && 
           doorState !== ENTITY_STATE_ENUM.DEATH
         ){
-          this.state = ENTITY_STATE_ENUM.BLOCKLEFT
+          this.state = ENTITY_STATE_ENUM.BLOCKRIGHT
           return true
         }
+        //敌人判断
+        for(let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i]
+          const { x: enemyX, y: enemyY } = enemy
+          if((enemyX === x &&enemyY === playerNextY) || (enemyX === weaponNextX && enemyY === weaponNextY)) {
+            this.state = ENTITY_STATE_ENUM.BLOCKRIGHT
+            return true
+          }
+        }
+
+        //地裂陷阱判断
+        if(
+          bursts.some(burst => burst.x === x && burst.y === playerNextY) &&
+          (!weaponTile || weaponTile.turnable)
+        ) {
+          return false
+        }
+
         if(playerTile && playerTile.moveable && (!weaponTile || weaponTile.turnable)){
           // return false
         } else {
-          this.state = ENTITY_STATE_ENUM.BLOCKLEFT
+          this.state = ENTITY_STATE_ENUM.BLOCKRIGHT
           return true
         }
       } else if(direction === DIRECTION_ENUM.RIGHT){
         if(playerNextY<0) {
-          this.state = ENTITY_STATE_ENUM.BLOCKRIGHT
+          this.state = ENTITY_STATE_ENUM.BLOCKLEFT
           return true
         }
         const weaponNextY = y - 1
         const weaponNextX = x + 1
         const playerTile = tileInfo[x]?.[playerNextY]
         const weaponTile = tileInfo[weaponNextX]?.[weaponNextY]
+        // 门判断
         if(
           ((doorX === x && doorY === playerNextY) || (doorX === x && doorY === weaponNextY)) && 
           doorState !== ENTITY_STATE_ENUM.DEATH
@@ -218,10 +288,29 @@ export class PlayerManager extends EntityManager {
           this.state = ENTITY_STATE_ENUM.BLOCKLEFT
           return true
         }
+
+        //敌人判断
+        for(let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i]
+          const { x: enemyX, y: enemyY } = enemy
+          if((enemyX === x &&enemyY === playerNextY) || (enemyX === weaponNextX && enemyY === weaponNextY)) {
+            this.state = ENTITY_STATE_ENUM.BLOCKLEFT
+            return true
+          }
+        }
+
+        //地裂陷阱判断
+        if(
+          bursts.some(burst => burst.x === x && burst.y === playerNextY) &&
+          (!weaponTile || weaponTile.turnable)
+        ) {
+          return false
+        }
+
         if(playerTile && playerTile.moveable && (!weaponTile || weaponTile.turnable)){
           // return false
         } else {
-          this.state = ENTITY_STATE_ENUM.BLOCKRIGHT
+          this.state = ENTITY_STATE_ENUM.BLOCKLEFT
           return true
         }
       }
@@ -229,12 +318,13 @@ export class PlayerManager extends EntityManager {
       const playerNextY = y + 1
       if(direction === DIRECTION_ENUM.TOP){
         if(playerNextY > column -1) {
-          this.state = ENTITY_STATE_ENUM.BLOCKFRONT
+          this.state = ENTITY_STATE_ENUM.BLOCKBACK
           return true
         } 
         const weaponNextY = y
         const playerTile = tileInfo[x]?.[playerNextY]
         const weaponTile = tileInfo[x]?.[weaponNextY]
+        //门判断
         if(
           ((doorX === x && doorY === playerNextY) || (doorX === x && doorY === weaponNextY)) && 
           doorState !== ENTITY_STATE_ENUM.DEATH
@@ -242,6 +332,24 @@ export class PlayerManager extends EntityManager {
           this.state = ENTITY_STATE_ENUM.BLOCKBACK
           return true
         }
+        //敌人判断
+        for(let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i]
+          const { x: enemyX, y: enemyY } = enemy
+          if((enemyX === x && enemyY === playerNextY)) {
+            this.state = ENTITY_STATE_ENUM.BLOCKBACK
+            return true
+          }
+        }
+
+        //地裂陷阱判断
+        if(
+          bursts.some(burst => burst.x === x && burst.y === playerNextY) &&
+          (!weaponTile || weaponTile.turnable)
+        ) {
+          return false
+        }
+
         if(playerTile && playerTile.moveable && (!weaponTile || weaponTile.turnable)){
           // return false
         } else {
@@ -250,7 +358,7 @@ export class PlayerManager extends EntityManager {
         }
       } else if(direction === DIRECTION_ENUM.BOTTOM){
         if(playerNextY > column - 1 ) {
-          this.state = ENTITY_STATE_ENUM.BLOCKBACK
+          this.state = ENTITY_STATE_ENUM.BLOCKFRONT
           return true
         }
         const weaponNextY = y + 2
@@ -264,10 +372,27 @@ export class PlayerManager extends EntityManager {
           this.state = ENTITY_STATE_ENUM.BLOCKFRONT
           return true
         }
+        //敌人判断
+        for(let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i]
+          const { x: enemyX, y: enemyY } = enemy
+          if((enemyX === x &&enemyY === weaponNextY) || (enemyX === x && enemyY === playerNextY)) {
+            this.state = ENTITY_STATE_ENUM.BLOCKFRONT
+            return true
+          }
+        }
+
+        //地裂陷阱判断
+        if(
+          bursts.some(burst => burst.x === x && burst.y === playerNextY) &&
+          (!weaponTile || weaponTile.turnable)
+        ) {
+          return false
+        }
         if(playerTile && playerTile.moveable && (!weaponTile || weaponTile.turnable)){
           // return false
         } else {
-          this.state = ENTITY_STATE_ENUM.BLOCKBACK
+          this.state = ENTITY_STATE_ENUM.BLOCKFRONT
           return true
         }
       } else if(direction === DIRECTION_ENUM.LEFT){
@@ -287,6 +412,24 @@ export class PlayerManager extends EntityManager {
           this.state = ENTITY_STATE_ENUM.BLOCKLEFT
           return true
         }
+        //敌人判断
+        for(let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i]
+          const { x: enemyX, y: enemyY } = enemy
+          if((enemyX === x &&enemyY === playerNextY) || (enemyX === weaponNextX && enemyY === weaponNextY)) {
+            this.state = ENTITY_STATE_ENUM.BLOCKLEFT
+            return true
+          }
+        }
+
+        //地裂陷阱判断
+        if(
+          bursts.some(burst => burst.x === x && burst.y === playerNextY) &&
+          (!weaponTile || weaponTile.turnable)
+        ) {
+          return false
+        }
+
         if(playerTile && playerTile.moveable && (!weaponTile || weaponTile.turnable)){
           // return false
         } else {
@@ -309,6 +452,23 @@ export class PlayerManager extends EntityManager {
         ){
           this.state = ENTITY_STATE_ENUM.BLOCKRIGHT
           return true
+        }
+        //敌人判断
+        for(let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i]
+          const { x: enemyX, y: enemyY } = enemy
+          if((enemyX === x &&enemyY === weaponNextY) || (enemyX === weaponNextX && enemyY === weaponNextY)) {
+            this.state = ENTITY_STATE_ENUM.BLOCKRIGHT
+            return true
+          }
+        }
+
+        //地裂陷阱判断
+        if(
+          bursts.some(burst => burst.x === x && burst.y === playerNextY) &&
+          (!weaponTile || weaponTile.turnable)
+        ) {
+          return false
         }
         if(playerTile && playerTile.moveable && (!weaponTile || weaponTile.turnable)){
           // return false
@@ -336,6 +496,25 @@ export class PlayerManager extends EntityManager {
           this.state = ENTITY_STATE_ENUM.BLOCKLEFT
           return true
         }
+
+        //敌人判断
+        for(let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i]
+          const { x: enemyX, y: enemyY } = enemy
+          if((enemyX === playerNextX &&enemyY === y) || (enemyX === weaponNextX && enemyY === weaponNextY)) {
+            this.state = ENTITY_STATE_ENUM.BLOCKLEFT
+            return true
+          }
+        }
+
+        //地裂陷阱判断
+        if(
+          bursts.some(burst => burst.x === playerNextX && burst.y === y) &&
+          (!weaponTile || weaponTile.turnable)
+        ) {
+          return false
+        }
+
         if(playerTile && playerTile.moveable && (!weaponTile || weaponTile.turnable)){
           // return false
         } else {
@@ -359,6 +538,24 @@ export class PlayerManager extends EntityManager {
           this.state = ENTITY_STATE_ENUM.BLOCKRIGHT
           return true
         }
+        //敌人判断
+        for(let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i]
+          const { x: enemyX, y: enemyY } = enemy
+          if((enemyX === playerNextX &&enemyY === y) || (enemyX === weaponNextX && enemyY === weaponNextY)) {
+            this.state = ENTITY_STATE_ENUM.BLOCKRIGHT
+            return true
+          }
+        }
+
+        //地裂陷阱判断
+        if(
+          bursts.some(burst => burst.x === playerNextX && burst.y === y) &&
+          (!weaponTile || weaponTile.turnable)
+        ) {
+          return false
+        }
+
         if(playerTile && playerTile.moveable && (!weaponTile || weaponTile.turnable)){
           // return false
         } else {
@@ -381,6 +578,25 @@ export class PlayerManager extends EntityManager {
           this.state = ENTITY_STATE_ENUM.BLOCKFRONT
           return true
         }
+
+        //敌人判断
+        for(let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i]
+          const { x: enemyX, y: enemyY } = enemy
+          if((enemyX === playerNextX &&enemyY === y) || (enemyX === weaponNextX && enemyY === y)) {
+            this.state = ENTITY_STATE_ENUM.BLOCKFRONT
+            return true
+          }
+        }
+
+        //地裂陷阱判断
+        if(
+          bursts.some(burst => burst.x === playerNextX && burst.y === y) &&
+          (!weaponTile || weaponTile.turnable)
+        ) {
+          return false
+        }
+
         if(playerTile && playerTile.moveable && (!weaponTile || weaponTile.turnable)){
           // return false
         } else {
@@ -402,6 +618,23 @@ export class PlayerManager extends EntityManager {
         ){
           this.state = ENTITY_STATE_ENUM.BLOCKBACK
           return true
+        }
+        //敌人判断
+        for(let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i]
+          const { x: enemyX, y: enemyY } = enemy
+          if((enemyX === playerNextX &&enemyY === y)) {
+            this.state = ENTITY_STATE_ENUM.BLOCKBACK
+            return true
+          }
+        }
+
+        //地裂陷阱判断
+        if(
+          bursts.some(burst => burst.x === playerNextX && burst.y === y) &&
+          (!weaponTile || weaponTile.turnable)
+        ) {
+          return false
         }
         if(playerTile && playerTile.moveable && (!weaponTile || weaponTile.turnable)){
           // return false
@@ -428,6 +661,25 @@ export class PlayerManager extends EntityManager {
           this.state = ENTITY_STATE_ENUM.BLOCKRIGHT
           return true
         }
+
+        //敌人判断
+        for(let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i]
+          const { x: enemyX, y: enemyY } = enemy
+          if ((enemyX === playerNextX && enemyY === y) || (enemyX === weaponNextX && enemyY === weaponNextY)) {
+            this.state = ENTITY_STATE_ENUM.BLOCKRIGHT
+            return true
+          }
+        }
+
+        //地裂陷阱判断
+        if(
+          bursts.some(burst => burst.x === playerNextX && burst.y === y) &&
+          (!weaponTile || weaponTile.turnable)
+        ) {
+          return false
+        }
+
         if(playerTile && playerTile.moveable && (!weaponTile || weaponTile.turnable)){
           // return false
         } else {
@@ -451,6 +703,24 @@ export class PlayerManager extends EntityManager {
           this.state = ENTITY_STATE_ENUM.BLOCKLEFT
           return true
         }
+
+        //敌人判断
+        for(let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i]
+          const { x: enemyX, y: enemyY } = enemy
+          if ((enemyX === playerNextX && enemyY === y) || (enemyX === weaponNextX && enemyY === weaponNextY)) {
+            this.state = ENTITY_STATE_ENUM.BLOCKLEFT
+            return true
+          }
+        }
+
+        //地裂陷阱判断
+        if(
+          bursts.some(burst => burst.x === playerNextX && burst.y === y) &&
+          (!weaponTile || weaponTile.turnable)
+        ) {
+          return false
+        }
         if(playerTile && playerTile.moveable && (!weaponTile || weaponTile.turnable)){
           // return false
         } else {
@@ -473,6 +743,24 @@ export class PlayerManager extends EntityManager {
           this.state = ENTITY_STATE_ENUM.BLOCKBACK
           return true
         }
+        //敌人判断
+        for(let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i]
+          const { x: enemyX, y: enemyY } = enemy
+          if ((enemyX === playerNextX && enemyY === y)) {
+            this.state = ENTITY_STATE_ENUM.BLOCKBACK
+            return true
+          }
+        }
+
+        //地裂陷阱判断
+        if(
+          bursts.some(burst => burst.x === playerNextX && burst.y === y) &&
+          (!weaponTile || weaponTile.turnable)
+        ) {
+          return false
+        }
+
         if(playerTile && playerTile.moveable && (!weaponTile || weaponTile.turnable)){
           // return false
         } else {
@@ -494,6 +782,23 @@ export class PlayerManager extends EntityManager {
         ) {
           this.state = ENTITY_STATE_ENUM.BLOCKFRONT
           return true
+        }
+        //敌人判断
+        for(let i = 0; i < enemies.length; i++) {
+          const enemy = enemies[i]
+          const { x: enemyX, y: enemyY } = enemy
+          if ((enemyX === playerNextX && enemyY === y) || (enemyX === weaponNextX && enemyY === y)) {
+            this.state = ENTITY_STATE_ENUM.BLOCKFRONT
+            return true
+          }
+        }
+
+        //地裂陷阱判断
+        if(
+          bursts.some(burst => burst.x === playerNextX && burst.y === y) &&
+          (!weaponTile || weaponTile.turnable)
+        ) {
+          return false
         }
         if(playerTile && playerTile.moveable && (!weaponTile || weaponTile.turnable)){
           // return false
@@ -517,7 +822,25 @@ export class PlayerManager extends EntityManager {
         nextY = y - 1
         nextX = x + 1
       }
+      //判断敌人
+      for (let i = 0; i < enemies.length; i++) {
+        const enemy = enemies[i]
+        const { x: enemyX, y: enemyY } = enemy
 
+        if (enemyX === nextX && enemyY === y) {
+          this.state = ENTITY_STATE_ENUM.BLOCKTURNLEFT
+
+          return true
+        } else if (enemyX === nextX && enemyY === nextY) {
+          this.state = ENTITY_STATE_ENUM.BLOCKTURNLEFT
+
+          return true
+        } else if (enemyX === x && enemyY === nextY) {
+          this.state = ENTITY_STATE_ENUM.BLOCKTURNLEFT
+
+          return true
+        }
+      }
       //最后判断地图元素
       if (
         (!tileInfo[x]?.[nextY] || tileInfo[x]?.[nextY].turnable) &&
@@ -544,6 +867,26 @@ export class PlayerManager extends EntityManager {
       } else if (direction === DIRECTION_ENUM.RIGHT) {
         nextY = y + 1
         nextX = x + 1
+      }
+      
+      //判断敌人
+      for (let i = 0; i < enemies.length; i++) {
+        const enemy = enemies[i]
+        const { x: enemyX, y: enemyY } = enemy
+
+        if (enemyX === nextX && enemyY === y) {
+          this.state = ENTITY_STATE_ENUM.BLOCKTURNRIGHT
+
+          return true
+        } else if (enemyX === nextX && enemyY === nextY) {
+          this.state = ENTITY_STATE_ENUM.BLOCKTURNRIGHT
+
+          return true
+        } else if (enemyX === x && enemyY === nextY) {
+          this.state = ENTITY_STATE_ENUM.BLOCKTURNRIGHT
+
+          return true
+        }
       }
 
       //最后判断地图元素

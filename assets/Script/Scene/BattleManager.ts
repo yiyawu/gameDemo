@@ -6,20 +6,25 @@ import levels, { ILevel } from '../../Levels'
 import DataManager, { IRecord }  from '../../Runtime/DataManager'
 import { TILE_HEIGHT, TILE_WIDTH } from '../Tile/TileManage'
 import EventManager from '../../Runtime/EventManager'
-import { ENTITY_STATE_ENUM, ENTITY_TYPE_ENUM, EVENT_ENUM } from '../../Enum'
+import { DIRECTION_ENUM, ENTITY_STATE_ENUM, ENTITY_TYPE_ENUM, EVENT_ENUM } from '../../Enum'
 import { PlayerManager } from '../Player/PlayerManager'
 import { WoodenSkeletonManager } from '../WoodenSkeleton/WoodenSkeletonManager'
 import { DoorManager } from '../Door/DoorManager'
 import { IronSkeletonManager } from '../IronSkeleton/IronSkeletonManager'
+import { SmokeManager } from '../Smoke/SmokeManager'
+import { BurstManager } from '../Burst/BurstManager'
+import SpikesManager from '../Spikes/SpikesManager'
 @ccclass('BattleManager')
 export class BattleManager extends Component {
-  level: ILevel
-  stage: Node
+  private level: ILevel
+  private stage: Node
+  private smokeLayer: Node
   onLoad(): void {
     DataManager.Instance.levelIndex = 1
     EventManager.Instance.on(EVENT_ENUM.RESTART_LEVEL, this.initLevel, this)
     EventManager.Instance.on(EVENT_ENUM.NEXT_LEVEL, this.nextLevel, this)
     EventManager.Instance.on(EVENT_ENUM.PLAYER_MOVE_END, this.checkArrived, this)
+    EventManager.Instance.on(EVENT_ENUM.SHOW_SMOKE, this.generateSmoke, this)
     EventManager.Instance.on(EVENT_ENUM.RECORD_STEP, this.record, this)
     EventManager.Instance.on(EVENT_ENUM.REVOKE_STEP, this.revoke, this)
   }
@@ -27,6 +32,7 @@ export class BattleManager extends Component {
     EventManager.Instance.off(EVENT_ENUM.RESTART_LEVEL, this.initLevel)
     EventManager.Instance.off(EVENT_ENUM.NEXT_LEVEL, this.nextLevel)
     EventManager.Instance.off(EVENT_ENUM.PLAYER_MOVE_END, this.checkArrived)
+    EventManager.Instance.off(EVENT_ENUM.SHOW_SMOKE, this.generateSmoke, this)
     EventManager.Instance.off(EVENT_ENUM.RECORD_STEP, this.record)
     EventManager.Instance.off(EVENT_ENUM.REVOKE_STEP, this.revoke)
     EventManager.Instance.clear()
@@ -57,7 +63,10 @@ export class BattleManager extends Component {
       DataManager.Instance.mapColumnCount = this.level.mapInfo[0].length || 0
       await Promise.all([
         this.generateTileMap(),
+        this.generateBursts(),
+        this.generateSpikes(),
         this.generateEnemies(),
+        this.generateSmokeLayer(),
         this.generateDoor(),
       ])
       await this.generatePlayer()
@@ -66,6 +75,32 @@ export class BattleManager extends Component {
   clearLevel(){
     this.stage.destroyAllChildren()
     DataManager.Instance.reset()
+  }
+  async generateSmoke(x: number, y: number, direction: DIRECTION_ENUM) {
+    const item = DataManager.Instance.smokes.find((smoke: SmokeManager) => smoke.state === ENTITY_STATE_ENUM.DEATH)
+    if(item){
+      item.x = x
+      item.y = y
+      item.node.setPosition(item.x * TILE_WIDTH - TILE_WIDTH * 1.5, -item.y * TILE_HEIGHT + TILE_HEIGHT * 1.5)
+      item.direction = direction
+      item.state = ENTITY_STATE_ENUM.IDLE
+    } else {
+      const node = createUINode()
+      node.setParent(this.smokeLayer)
+      const smokeManager = node.addComponent(SmokeManager)
+      await smokeManager.init({
+        x,
+        y,
+        direction,
+        type: ENTITY_TYPE_ENUM.SMOKE,
+        state: ENTITY_STATE_ENUM.IDLE
+      })
+      DataManager.Instance.smokes.push(smokeManager)
+    }
+  }
+  generateSmokeLayer() {
+    this.smokeLayer = createUINode()
+    this.smokeLayer.setParent(this.stage)
   }
   generateStage() {
     this.stage = createUINode()
@@ -100,6 +135,34 @@ export class BattleManager extends Component {
       const manager = node.addComponent(Manager)
       promise.push(manager.init(enemy))
       DataManager.Instance.enemies.push(manager)
+    }
+    await Promise.all(promise)
+  }
+  async generateBursts() {
+    // 初始化
+    DataManager.Instance.bursts = []
+    const promise = []
+    for(let i = 0; i < this.level.bursts.length; i++) {
+      const burst = this.level.bursts[i]
+      const node = createUINode()
+      node.setParent(this.stage)
+      const burstManager = node.addComponent(BurstManager)
+      promise.push(burstManager.init(burst))
+      DataManager.Instance.enemies.push(burstManager)
+    }
+    await Promise.all(promise)
+  }
+  async generateSpikes() {
+    // 初始化
+    DataManager.Instance.spikes = []
+    const promise = []
+    for(let i = 0; i < this.level.spikes.length; i++) {
+      const spike = this.level.spikes[i]
+      const node = createUINode()
+      node.setParent(this.stage)
+      const spikesManager = node.addComponent(SpikesManager)
+      promise.push(spikesManager.init(spike))
+      DataManager.Instance.enemies.push(spikesManager)
     }
     await Promise.all(promise)
   }
